@@ -20,7 +20,7 @@ df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
 unused_cols = [
     "vehicle_type", "taxi_company_borough", "taxi_pick_up_location",
     "bridge_highway_name", "bridge_highway_direction", "road_ramp",
-    "bridge_highway_segment", "due_date"
+    "bridge_highway_segment", "due_date", "facility_type"
 ]
 df.drop(columns=[c for c in unused_cols if c in df.columns], inplace=True)
 
@@ -85,6 +85,24 @@ df = df.drop_duplicates(
 # Handle missing values
 df["full_descriptor"] = df["full_descriptor"].replace("", "No description")
 df["resolution_time_hours"] = df["resolution_time_hours"].fillna(df["resolution_time_hours"].median())
+
+# Fill empty landmarks with incident_address
+if "landmark" in df.columns and "incident_address" in df.columns:
+    df["landmark"] = df["landmark"].replace("", np.nan)
+    df["landmark"] = df["landmark"].fillna(df["incident_address"])
+    df["landmark"] = df["landmark"].fillna("Unknown")
+
+
+# Handle Resolution Description
+if "resolution_description" in df.columns:
+    df["resolution_description"] = df["resolution_description"].replace("", np.nan).fillna("Open")
+
+# Handle Resolution Action Updated Date
+if "resolution_action_updated_date" in df.columns:
+    df["resolution_action_updated_date"] = pd.to_datetime(df["resolution_action_updated_date"], errors="coerce")
+    # Using "Pending" makes the column a string column, which is fine for basic cleaning!
+    df["resolution_action_updated_date"] = df["resolution_action_updated_date"].fillna("Pending")
+
 
 # Sentiment (lexicon-based)
 sia = SentimentIntensityAnalyzer()
