@@ -16,7 +16,7 @@ df = pd.read_csv(
 # Standardize column names
 df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
 
-# Drop unused/redundant columns
+# Drop unused/reduant columns
 unused_cols = [
     "vehicle_type", "taxi_company_borough", "taxi_pick_up_location",
     "bridge_highway_name", "bridge_highway_direction", "road_ramp",
@@ -83,7 +83,8 @@ df = df.drop_duplicates(
 )
 
 # Handle missing values
-df["full_descriptor"] = df["full_descriptor"].replace("", "No description")
+df["full_descriptor"] = df["full_descriptor"].replace("", np.nan)
+df["full_descriptor"] = df["full_descriptor"].fillna(df["complaint_type"])
 df["resolution_time_hours"] = df["resolution_time_hours"].fillna(df["resolution_time_hours"].median())
 
 # Fill empty landmarks with incident_address
@@ -92,7 +93,6 @@ if "landmark" in df.columns and "incident_address" in df.columns:
     df["landmark"] = df["landmark"].fillna(df["incident_address"])
     df["landmark"] = df["landmark"].fillna("Unknown")
 
-
 # Handle Resolution Description
 if "resolution_description" in df.columns:
     df["resolution_description"] = df["resolution_description"].replace("", np.nan).fillna("Open")
@@ -100,9 +100,11 @@ if "resolution_description" in df.columns:
 # Handle Resolution Action Updated Date
 if "resolution_action_updated_date" in df.columns:
     df["resolution_action_updated_date"] = pd.to_datetime(df["resolution_action_updated_date"], errors="coerce")
-    # Using "Pending" makes the column a string column, which is fine for basic cleaning!
     df["resolution_action_updated_date"] = df["resolution_action_updated_date"].fillna("Pending")
 
+# BBL values of -1 indicate complaints not associated with a specific property.
+df["bbl"] = pd.to_numeric(df["bbl"], errors="coerce")
+df["bbl"] = df["bbl"].fillna(-1)
 
 # Sentiment (lexicon-based)
 sia = SentimentIntensityAnalyzer()
@@ -132,6 +134,11 @@ df["top_keywords"] = [
     ", ".join([keywords[i] for i in row.nonzero()[1][:3]])
     for row in ngrams
 ]
+
+df["top_keywords"] = df["top_keywords"].replace("", np.nan)
+df["top_keywords"] = df["top_keywords"].fillna(df["complaint_type"])
+df["top_keywords"] = df["top_keywords"].fillna("unspecified complaint")
+
 
 # ML Complaint Classification (Traditional ML)
 df_ml = df.dropna(subset=["complaint_type"])
@@ -166,4 +173,5 @@ if "categories" in df.columns:
 # Save cleaned data
 df.to_csv("data/processed/nyc_311_clean.csv", index=False)
 print("✓ Phase 2 cleaning, enrichment, and ML classification complete")
+
 
