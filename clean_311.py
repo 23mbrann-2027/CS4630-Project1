@@ -75,6 +75,12 @@ if "cross_street_1" in df.columns and "cross_street_2" in df.columns:
     ).str.strip(" &")
 df.drop(columns=[c for c in ["cross_street_1", "cross_street_2"] if c in df.columns], inplace=True)
 
+# Handle missing council_district
+if "council_district" in df.columns:
+    df["council_district"] = df["council_district"].replace("", np.nan)  # empty strings → NaN
+    df["council_district"] = df["council_district"].fillna("NA")          # NaN → "NA"
+
+
 # Deduplication
 # Rule: same complaint_type, same address, same full_descriptor, same day = likely duplicate
 df["created_day"] = df["created_date"].dt.date
@@ -109,6 +115,21 @@ df["bbl"] = df["bbl"].fillna(-1)
 # Sentiment (lexicon-based)
 sia = SentimentIntensityAnalyzer()
 df["sentiment"] = df["full_descriptor"].apply(lambda x: sia.polarity_scores(str(x))["compound"])
+
+
+# Handle missing coordinates and location fields
+# Numeric fields → fill with -1
+for col in ["x_coordinate_state_plane", "y_coordinate_state_plane", "latitude", "longitude"]:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")  # ensure numeric
+        df[col] = df[col].fillna(-1)  # use -1 as placeholder for missing coords
+
+# String fields → fill with 'Unknown'
+for col in ["location", "intersection_streets"]:
+    if col in df.columns:
+        df[col] = df[col].replace("", np.nan)  # convert empty strings to NaN
+        df[col] = df[col].fillna("Unknown")
+
 
 # Severity heuristic
 SEVERITY_KEYWORDS = {
