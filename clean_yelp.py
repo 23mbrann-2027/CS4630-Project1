@@ -122,14 +122,14 @@ if __name__ == "__main__":
     df_business = clean_business_json(business_path)
     df_checkin = clean_checkin_json(checkin_path)
 
-    # df_business.to_csv(
-    #     "data/processed/cleaned_business.csv",
-    #     index = False
-    # )
-    # df_checkin.to_csv(
-    #     "data/processed/cleaned_checkin.csv",
-    #     index = False
-    # )
+    df_business.to_csv(
+        "data/processed/cleaned_business.csv",
+        index = False
+    )
+    df_checkin.to_csv(
+        "data/processed/cleaned_checkin.csv",
+        index = False
+    )
 
     # Filtering Business Dataset to NYC businesses
     nyc_business_ids = set(df_business["business_id"])
