@@ -1,0 +1,184 @@
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import OneHotEncoder
+
+# load data
+
+
+df = pd.read_csv(
+    "data/raw/philly_311_2025.csv",
+    dtype={"zipcode": str},
+    low_memory=False
+)
+
+# Standardize column names
+df.columns = (
+    df.columns
+    .str.lower()
+    .str.strip()
+    .str.replace(" ", "_")
+)
+
+
+# rename columns
+
+
+df.rename(columns={
+    "requested_datetime": "created_date",
+    "closed_datetime": "closed_date",
+    "zipcode": "zip_code",
+    "lat": "latitude",
+    "lon": "longitude"
+}, inplace=True)
+
+# clean time
+datetime_cols = ["created_date", "closed_date"]
+for col in datetime_cols:
+    if col in df.columns:
+        df[col] = df[col].astype(str).str.replace(r"\+\d{2}(:\d{2})?$", "", regex=True)
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+
+# clean text columns
+df["service_name"] = (
+    df["service_name"]
+    .astype(str)
+    .str.lower()
+    .str.strip()
+    .str.replace(r"[^a-z0-9\s]", "", regex=True)
+)
+
+df["status"] = df["status"].fillna("unknown")
+df["subject"] = df["subject"].fillna("").astype(str)
+df["status_notes"] = df["status_notes"].fillna("").astype(str)
+
+# Determine open/closed based on status_notes and closed_date
+empty_notes = df["status_notes"].str.strip() == ""
+has_closed_date = df["closed_date"].notna()
+df.loc[empty_notes & has_closed_date, "status"] = "closed"
+df.loc[empty_notes & ~has_closed_date, "status"] = "open"
+
+# Fill missing status_notes
+mask_closed = empty_notes & (df["status"].str.lower() == "closed")
+df.loc[mask_closed, "status_notes"] = "Issue Resolved"
+
+mask_open = empty_notes & (df["status"].str.lower() != "closed")
+df.loc[mask_open, "status_notes"] = "Open"
+
+# clean location data
+df["zip_code"] = df["zip_code"].str.extract(r"(\d{5})")
+df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
+
+# Impute missing lat/lon using Random Forest based on ZIP code
+df_ml_latlon = df[df["zip_code"].notna()].copy()
+df_missing = df_ml_latlon[df_ml_latlon["latitude"].isna() | df_ml_latlon["longitude"].isna()]
+df_known = df_ml_latlon.drop(df_missing.index)
+
+encoder = OneHotEncoder(handle_unknown="ignore")
+zip_encoded_known = encoder.fit_transform(df_known[["zip_code"]]).toarray()
+zip_encoded_missing = encoder.transform(df_missing[["zip_code"]]).toarray()
+
+rf_lat = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_lon = RandomForestRegressor(n_estimators=100, random_state=42)
+
+rf_lat.fit(zip_encoded_known, df_known["latitude"].values)
+rf_lon.fit(zip_encoded_known, df_known["longitude"].values)
+
+pred_lat = rf_lat.predict(zip_encoded_missing)
+pred_lon = rf_lon.predict(zip_encoded_missing)
+
+df.loc[df_missing.index, "latitude"] = pred_lat
+df.loc[df_missing.index, "longitude"] = pred_lon
+
+# Fallback to city center if still missing
+PHILLY_CENTER = {"latitude": 39.9526, "longitude": -75.1652}
+df["latitude"] = df["latitude"].fillna(PHILLY_CENTER["latitude"])
+df["longitude"] = df["longitude"].fillna(PHILLY_CENTER["longitude"])
+
+# Empty media
+if "media_url" in df.columns:
+    df["media_url"] = df["media_url"].fillna("").astype(str)
+    df.loc[df["media_url"].str.strip() == "", "media_url"] = "no_media"
+
+# Remove columns
+cols_to_drop = ["updated_datetime", "expected_datetime"]
+df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
+
+# remove duplicates
+if "service_request_id" in df.columns:
+    df = df.drop_duplicates(subset=["service_request_id"])
+
+df = df.sort_values("created_date")
+df = df.drop_duplicates(subset=["address", "service_name", "created_date"], keep="first")
+
+# Build text for ML
+GENERIC_NOTES = {"issue resolved", "closed", "completed", "work completed"}
+
+def build_text(row):
+    subject = row["subject"].strip()
+    notes = row["status_notes"].strip().lower()
+    if notes in GENERIC_NOTES:
+        return subject
+    if subject and notes:
+        return f"{subject} {notes}"
+    return subject if subject else notes
+
+df["full_text"] = df.apply(build_text, axis=1)
+df.loc[df["full_text"] == "", "full_text"] = df["service_name"]
+
+# RRule base
+SEVERITY_KEYWORDS = {
+    "high": ["emergency", "danger", "fire", "hazard"],
+    "medium": ["noise", "leak", "blocked"],
+    "low": ["broken", "request"]
+}
+
+def estimate_severity(text):
+    text = str(text).lower()
+    for level, words in SEVERITY_KEYWORDS.items():
+        if any(word in text for word in words):
+            return level
+    return "unknown"
+
+df["severity"] = df["full_text"].apply(estimate_severity)
+
+# Keywords
+vectorizer = CountVectorizer(stop_words="english", max_features=30, ngram_range=(1,2))
+ngrams = vectorizer.fit_transform(df["full_text"])
+keywords = vectorizer.get_feature_names_out()
+df["top_keywords"] = [
+    ", ".join([keywords[i] for i in row.nonzero()[1][:3]])
+    for row in ngrams
+]
+df["top_keywords"] = df["top_keywords"].replace("", np.nan)
+df["top_keywords"] = df["top_keywords"].fillna(df["service_name"])
+
+# ML classification
+df_ml = df.dropna(subset=["service_name", "full_text"])
+X_train, X_test, y_train, y_test = train_test_split(
+    df_ml["full_text"], df_ml["service_name"], test_size=0.2, random_state=42, stratify=df_ml["service_name"]
+)
+
+tfidf = TfidfVectorizer(stop_words="english", max_features=5000)
+X_train_vec = tfidf.fit_transform(X_train)
+X_test_vec = tfidf.transform(X_test)
+
+clf = LogisticRegression(max_iter=500, class_weight="balanced")
+clf.fit(X_train_vec, y_train)
+y_pred = clf.predict(X_test_vec)
+
+print("\nModel Accuracy:", clf.score(X_test_vec, y_test))
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
+
+df["predicted_service_name"] = clf.predict(tfidf.transform(df["full_text"]))
+
+# Save data
+df.to_csv("data/processed/philly_311_clean.csv", index=False)
+print("\n✓ Final 311 clean + formatted + ML dataset saved.")
+
