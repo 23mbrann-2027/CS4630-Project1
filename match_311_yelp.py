@@ -82,7 +82,7 @@ gdf_matched = gdf_311.dropna(subset=["nearest_yelp_business_id"])
 
 # Save final matched dataset
 gdf_matched.to_csv(
-    "data/processed/311_yelp_geospatial_matches_full.csv",
+    "data/processed/311_yelp_matches_full.csv",
     index=False
 )
 
