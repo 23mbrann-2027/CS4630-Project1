@@ -1,5 +1,8 @@
 import pandas as pd
 import os
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 def standardize_columns(df):
@@ -14,6 +17,7 @@ def standardize_columns(df):
 def clean_business_json(path):
     df = pd.read_json(path, lines = True)
     df = standardize_columns(df)
+
 
     #Business Category Normalization
     df["categories"] = (
@@ -38,6 +42,9 @@ def clean_business_json(path):
 
     df["city"] = df["city"].str.lower().str.strip()
     df["state"] = df["state"].str.lower().str.strip()
+
+    df = df[df["city"] == "philadelphia"]
+
 
     # Removing Duplicate Records
     before = df.shape[0]
@@ -74,7 +81,8 @@ def clean_review_json(input_path, output_path, business_ids):
         chunksize = 100_000
     )
 
-    first_chunk = True
+    writer = None
+
 
     for chunk in chunk_iter:
         chunk = standardize_columns(chunk)
@@ -96,20 +104,30 @@ def clean_review_json(input_path, output_path, business_ids):
             "review_id",
             "business_id",
             "stars",
+            "text",
             "review_length",
             "word_count",
             "date"
         ]]
 
-        reduced.to_csv(
-            output_path,
-            mode = 'w' if first_chunk else 'a',
-            header = first_chunk,
-            index = False
-        )
-        first_chunk = False
+        table = pa.Table.from_pandas(reduced)
+
+        if writer is None:
+            writer = pq.ParquetWriter(
+                output_path,
+                table.schema,
+                compression = "snappy"
+            )
+        writer.write_table(table)
+
+    if writer:
+        writer.close()
 
     print("Review Dataset Processed")
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -117,7 +135,7 @@ if __name__ == "__main__":
     checkin_path = "data/raw/yelp_academic_dataset_checkin.json"
     review_path = "data/raw/yelp_academic_dataset_review.json"
 
-    processed_review_path = "data/raw/cleaned_reviews.csv"
+    processed_review_path = "data/processed/cleaned_reviews.parquet"
 
     df_business = clean_business_json(business_path)
     df_checkin = clean_checkin_json(checkin_path)
@@ -132,12 +150,12 @@ if __name__ == "__main__":
     )
 
     # Filtering Business Dataset to NYC businesses
-    nyc_business_ids = set(df_business["business_id"])
+    phil_business_ids = set(df_business["business_id"])
 
     clean_review_json(
         review_path,
         processed_review_path,
-        nyc_business_ids
+        phil_business_ids
     )
 
 
