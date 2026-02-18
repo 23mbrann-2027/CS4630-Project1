@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
@@ -18,7 +19,7 @@ df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
 
 df = df.dropna(subset=["latitude", "longitude"])
 
-df["nearest_yelp_category"] = df["nearest_yelp_category"].fillna("unknown")
+df["nearest_yelp_primary_category"] = df["nearest_yelp_primary_category"].fillna("unknown")
 df["nearest_yelp_stars"] = df["nearest_yelp_stars"].fillna(df["nearest_yelp_stars"].median())
 df["nearest_yelp_review_count"] = df["nearest_yelp_review_count"].fillna(0)
 
@@ -41,15 +42,36 @@ print("\nTop Hotspots:")
 print(top_hotspots[["area", "count"]])
 
 # Plot hotspots
-plt.figure()
-plt.bar(top_hotspots["area"], top_hotspots["count"])
-plt.title("Top Complaint Hotspots (Areas)")
-plt.xlabel("Area (Lat, Lon)")
-plt.ylabel("Number of Complaints")
-plt.xticks(rotation=45)
-plt.grid(axis="y", alpha=0.3)
+# plt.figure()
+# plt.bar(top_hotspots["area"], top_hotspots["count"])
+# plt.title("Top Complaint Hotspots (Areas)")
+# plt.xlabel("Area (Lat, Lon)")
+# plt.ylabel("Number of Complaints")
+# plt.xticks(rotation=45)
+# plt.grid(axis="y", alpha=0.3)
+# plt.tight_layout()
+# plt.show()
+
+
+# Hexbin Hotspot Map (Geographic Heatmap)
+plt.figure(figsize=(8, 6))
+
+plt.hexbin(
+    df["longitude"],
+    df["latitude"],
+    gridsize=60,        # resolution of the hex grid
+    cmap="viridis",     # heatmap color scheme
+    mincnt=1,            # only show bins with at least 1 complaint
+    norm = LogNorm()
+)
+
+plt.colorbar(label="Complaint Count")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.title("Complaint Hotspots (Hexbin Map)")
 plt.tight_layout()
 plt.show()
+
 
 # Business vs complaints
 business_counts = df.groupby("nearest_yelp_business_id").size().reset_index(name="complaint_count")
@@ -77,7 +99,7 @@ plt.scatter(review_counts, complaints, alpha=0.5)
 # Add trend line
 z = np.polyfit(review_counts, complaints, 1)
 p = np.poly1d(z)
-plt.plot(review_counts, p(review_counts))
+plt.plot(review_counts, p(review_counts), color = "blue", linewidth = 2)
 
 plt.xlabel("Business Popularity (Log Review Count)")
 plt.ylabel("Nearby Complaints (Log Count)")
@@ -87,9 +109,9 @@ plt.show()
 
 # Category analysis
 category_counts = df[
-    (df["nearest_yelp_category"] != "unknown") &
-    (df["nearest_yelp_category"].str.strip() != "")
-]["nearest_yelp_category"].value_counts().head(10)
+    (df["nearest_yelp_primary_category"] != "unknown") &
+    (df["nearest_yelp_primary_category"].str.strip() != "")
+]["nearest_yelp_primary_category"].value_counts().head(10)
 
 category_counts.index = category_counts.index.str.title()
 
@@ -150,7 +172,7 @@ plt.show()
 
 # Distance analysis
 if "distance_miles" in df.columns:
-    category_distance = df.groupby("nearest_yelp_category")["distance_miles"].mean().sort_values()
+    category_distance = df.groupby("nearest_yelp_primary_category")["distance_miles"].mean().sort_values()
 
     print("\nAvg Distance to Business by Category:")
     print(category_distance.head(10))
