@@ -5,7 +5,7 @@ from sklearn.neighbors import NearestNeighbors
 
 # Load cleaned datasets
 df_311 = pd.read_csv("data/processed/philly_311_clean.csv")
-df_yelp = pd.read_csv("data/processed/cleaned_business.csv")
+df_yelp = pd.read_csv("data/processed/normalized_businesses.csv")
 
 # Use only rows with valid coordinates
 df_311 = df_311[(df_311["latitude"] != -1) & (df_311["longitude"] != -1)].copy()
@@ -53,8 +53,9 @@ for dist, idx in zip(distances_miles, indices.flatten()):
     if dist <= radius_miles:
         yelp_row = gdf_yelp.iloc[idx]
         matched_business_ids.append(yelp_row["business_id"])
-        cat_col = "normalized_category" if "normalized_category" in gdf_yelp.columns else "categories"
-        matched_categories.append(yelp_row.get(cat_col, "unknown"))
+        #cat_col = "normalized_category" if "normalized_category" in gdf_yelp.columns else "categories"
+        #matched_categories.append(yelp_row.get(cat_col, "unknown"))
+        matched_categories.append(yelp_row.get("primary_category","unknown"))
         matched_names.append(yelp_row.get("name", "unknown"))
         matched_addresses.append(yelp_row.get("address", "unknown"))
         matched_stars.append(yelp_row.get("stars", np.nan))
@@ -69,7 +70,7 @@ for dist, idx in zip(distances_miles, indices.flatten()):
 
 # Add columns to 311 GeoDataFrame
 gdf_311["nearest_yelp_business_id"] = matched_business_ids
-gdf_311["nearest_yelp_category"] = matched_categories
+gdf_311["nearest_yelp_primary_category"] = matched_categories
 gdf_311["nearest_yelp_name"] = matched_names
 gdf_311["nearest_yelp_address"] = matched_addresses
 gdf_311["nearest_yelp_stars"] = matched_stars
