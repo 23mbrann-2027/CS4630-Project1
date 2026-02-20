@@ -7,9 +7,11 @@ from sklearn.neighbors import NearestNeighbors
 df_311 = pd.read_csv("data/processed/philly_311_clean.csv")
 df_yelp = pd.read_csv("data/processed/normalized_businesses.csv")
 
-# Use only rows with valid coordinates
-df_311 = df_311[(df_311["latitude"] != -1) & (df_311["longitude"] != -1)].copy()
-df_yelp = df_yelp[(df_yelp["latitude"] != -1) & (df_yelp["longitude"] != -1)].copy()
+# Keep only 311 complaints with real lat/lon (not imputed)
+df_311 = df_311[df_311["latlon_imputed"] == False].copy()
+
+# Keep Yelp businesses have valid coordinates
+df_yelp = df_yelp[(df_yelp["latitude"].notna()) & (df_yelp["longitude"].notna())].copy()
 
 # Convert to GeoDataFrames
 gdf_311 = gpd.GeoDataFrame(

@@ -69,37 +69,49 @@ df.loc[mask_closed, "status_notes"] = "Issue Resolved"
 mask_open = empty_notes & (df["status"].str.lower() != "closed")
 df.loc[mask_open, "status_notes"] = "Open"
 
-# clean location data
+# Clean ZIP and numeric coordinates
 df["zip_code"] = df["zip_code"].str.extract(r"(\d{5})")
 df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
 df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
 
-# Impute missing lat/lon using Random Forest based on ZIP code
-df_ml_latlon = df[df["zip_code"].notna()].copy()
-df_missing = df_ml_latlon[df_ml_latlon["latitude"].isna() | df_ml_latlon["longitude"].isna()]
-df_known = df_ml_latlon.drop(df_missing.index)
+# Flag missing lat/lon
+df["latlon_missing"] = df["latitude"].isna() | df["longitude"].isna()
 
-encoder = OneHotEncoder(handle_unknown="ignore")
-zip_encoded_known = encoder.fit_transform(df_known[["zip_code"]]).toarray()
-zip_encoded_missing = encoder.transform(df_missing[["zip_code"]]).toarray()
+# Impute lat/lon using ZIP centroid
+zip_centroids = df[df["latlon_missing"] == False].groupby("zip_code")[["latitude", "longitude"]].median()
 
-rf_lat = RandomForestRegressor(n_estimators=100, random_state=42)
-rf_lon = RandomForestRegressor(n_estimators=100, random_state=42)
+mask_zip_fillable = df["zip_code"].isin(zip_centroids.index) & df["latlon_missing"]
+if mask_zip_fillable.any():
+    df.loc[mask_zip_fillable, ["latitude", "longitude"]] = df.loc[mask_zip_fillable].join(
+        zip_centroids, on="zip_code", rsuffix="_centroid"
+    )[["latitude_centroid", "longitude_centroid"]]
 
-rf_lat.fit(zip_encoded_known, df_known["latitude"].values)
-rf_lon.fit(zip_encoded_known, df_known["longitude"].values)
+# Impute missing lat/lon and ZIP within groups defined by a single column
+group_col = "agency_responsible" 
+if group_col in df.columns:
+    # Loop through each group
+    for group_value in df[group_col].dropna().unique():
+        group_rows = df[group_col] == group_value
+        # Only use rows that already have lat/lon
+        group_coords = df[group_rows & (~df["latlon_missing"])]
+        if not group_coords.empty:
+            group_median = group_coords[["latitude", "longitude"]].median()
+            # Fill missing lat/lon for this group
+            mask_missing = group_rows & df["latlon_missing"]
+            df.loc[mask_missing, ["latitude", "longitude"]] = group_median.values
 
-pred_lat = rf_lat.predict(zip_encoded_missing)
-pred_lon = rf_lon.predict(zip_encoded_missing)
+            # Fill missing ZIPs for this group using mode
+            missing_zip_mask = group_rows & df["zip_code"].isna()
+            if missing_zip_mask.any():
+                common_zip = df.loc[group_rows, "zip_code"].mode()
+                if not common_zip.empty:
+                    df.loc[missing_zip_mask, "zip_code"] = common_zip[0]
 
-df.loc[df_missing.index, "latitude"] = pred_lat
-df.loc[df_missing.index, "longitude"] = pred_lon
+# Flag which rows were imputed
+df["latlon_imputed"] = df["latlon_missing"]
 
-# Fallback to city center if still missing
-PHILLY_CENTER = {"latitude": 39.9526, "longitude": -75.1652}
-df["latitude"] = df["latitude"].fillna(PHILLY_CENTER["latitude"])
-df["longitude"] = df["longitude"].fillna(PHILLY_CENTER["longitude"])
-
+# Drop columns not important
+df = df.drop(columns=["latitude_centroid", "longitude_centroid", "latlon_missing"], errors="ignore")
 # Empty media
 if "media_url" in df.columns:
     df["media_url"] = df["media_url"].fillna("").astype(str)
