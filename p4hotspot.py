@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
+import seaborn as sns
 # Better plot style
 plt.style.use("ggplot")
 
@@ -59,7 +59,7 @@ plt.figure(figsize=(8, 6))
 plt.hexbin(
     df["longitude"],
     df["latitude"],
-    gridsize=60,        # resolution of the hex grid
+    gridsize=60,        # resolution of the hex grid (can)
     cmap="viridis",     # heatmap color scheme
     mincnt=1,            # only show bins with at least 1 complaint
     norm = LogNorm()
@@ -91,20 +91,28 @@ print(business_df.head())
 # Scatter plot 
 plt.figure()
 
-review_counts = np.log1p(business_df["nearest_yelp_review_count"])
-complaints = np.log1p(business_df["complaint_count"])
+# Apply log1p transformation
+business_df['log_reviews'] = np.log1p(business_df["nearest_yelp_review_count"])
+business_df['log_complaints'] = np.log1p(business_df["complaint_count"])
 
-plt.scatter(review_counts, complaints, alpha=0.5)
+plt.figure(figsize=(10, 6))
 
-# Add trend line
-z = np.polyfit(review_counts, complaints, 1)
-p = np.poly1d(z)
-plt.plot(review_counts, p(review_counts), color = "blue", linewidth = 2)
+# Use regplot for a much cleaner trend line + scatter combo
+sns.regplot(
+    data=business_df,
+    x='log_reviews',
+    y='log_complaints',
+    scatter_kws={'alpha': 0.2, 's': 20}, # Lower alpha helps see density
+    line_kws={'color': 'blue', 'lw': 3},
+    x_jitter=0.1,  # Adds a tiny bit of horizontal "shake" to reveal overlaps
+    y_jitter=0.1   # Adds a tiny bit of vertical "shake" to reveal overlaps
+)
 
 plt.xlabel("Business Popularity (Log Review Count)")
 plt.ylabel("Nearby Complaints (Log Count)")
-plt.title("Do Popular Businesses Have More Complaints Nearby?")
-plt.grid(alpha=0.3)
+plt.title("Relationship Between Business Popularity and Nearby Complaints")
+plt.grid(True, linestyle='--', alpha=0.5)
+
 plt.show()
 
 # Category analysis
