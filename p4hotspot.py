@@ -42,15 +42,15 @@ print("\nTop Hotspots:")
 print(top_hotspots[["area", "count"]])
 
 # Plot hotspots
-# plt.figure()
-# plt.bar(top_hotspots["area"], top_hotspots["count"])
-# plt.title("Top Complaint Hotspots (Areas)")
-# plt.xlabel("Area (Lat, Lon)")
-# plt.ylabel("Number of Complaints")
-# plt.xticks(rotation=45)
-# plt.grid(axis="y", alpha=0.3)
-# plt.tight_layout()
-# plt.show()
+plt.figure()
+plt.bar(top_hotspots["area"], top_hotspots["count"])
+plt.title("Top Complaint Hotspots (Areas)")
+plt.xlabel("Area (Lat, Lon)")
+plt.ylabel("Number of Complaints")
+plt.xticks(rotation=45)
+plt.grid(axis="y", alpha=0.3)
+plt.tight_layout()
+plt.show()
 
 
 # Hexbin Hotspot Map (Geographic Heatmap)
@@ -127,9 +127,8 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 plt.grid(axis="y", alpha=0.3)
 plt.show()
-# -----------------------
 # Clustering (by location only)
-# -----------------------
+
 cluster_features = df[["latitude", "longitude"]].copy()  # only lat/lon
 
 scaler = StandardScaler()
