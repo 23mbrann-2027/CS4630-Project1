@@ -186,20 +186,4 @@ if "distance_miles" in df.columns:
     plt.grid(axis="y", alpha=0.3)
     plt.show()
 
-# Time analysis
-if "requested_datetime" in df.columns:
-    df["requested_datetime"] = pd.to_datetime(df["requested_datetime"], errors="coerce")
-    df = df.dropna(subset=["requested_datetime"])
-
-    df["hour"] = df["requested_datetime"].dt.hour
-    hourly_counts = df["hour"].value_counts().sort_index()
-
-    plt.figure()
-    hourly_counts.plot(marker="o")
-    plt.title("Complaints by Hour of Day")
-    plt.xlabel("Hour")
-    plt.ylabel("Count")
-    plt.grid(alpha=0.3)
-    plt.show()
-
 print("\nPhase 4 Analysis Complete!")
