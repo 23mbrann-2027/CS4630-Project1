@@ -131,7 +131,7 @@ df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 if "service_request_id" in df.columns:
     df = df.drop_duplicates(subset=["service_request_id"])
 
-df = df.sort_values("created_date")
+df = df.sort_values("created_date", ascending=False)
 df = df.drop_duplicates(subset=["address", "service_name", "created_date"], keep="first")
 
 # Build text for ML
