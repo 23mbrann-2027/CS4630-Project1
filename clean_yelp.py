@@ -149,7 +149,7 @@ if __name__ == "__main__":
         index = False
     )
 
-    # Filtering Business Dataset to NYC businesses
+    # Filtering Business Dataset to Philadelphia businesses
     phil_business_ids = set(df_business["business_id"])
 
     clean_review_json(
