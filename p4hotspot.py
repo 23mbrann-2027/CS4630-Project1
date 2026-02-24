@@ -133,14 +133,14 @@ y = np.log1p(area_df["complaint_count"])
 # Scatter plot
 plt.figure(figsize=(8,6))
 
-plt.scatter(x, y, alpha=0.5)
+plt.scatter(x, y,alpha=0.5)
 
 # Add trend line
 z = np.polyfit(x, y, 1)
 p = np.poly1d(z)
 idx = np.argsort(x)
 
-plt.plot(x.iloc[idx], p(x.iloc[idx]), linewidth=2)
+plt.plot(x.iloc[idx], p(x.iloc[idx]),color = "blue", linewidth=2)
 
 # Labels and formatting
 plt.xlabel("Business Density (Log Count)")
