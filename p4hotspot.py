@@ -5,7 +5,6 @@ from matplotlib.colors import LogNorm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-# Better plot style
 plt.style.use("ggplot")
 
 # Load data
@@ -134,7 +133,7 @@ cluster_features = df[["latitude", "longitude"]].copy()  # only lat/lon
 scaler = StandardScaler()
 scaled_features = scaler.fit_transform(cluster_features)
 
-# Optional: check inertia for 2–7 clusters
+# 2–7 clusters
 inertia = []
 K_range = range(2, 8)
 for k in K_range:
