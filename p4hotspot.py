@@ -265,7 +265,6 @@ plt.tight_layout()
 
 plt.show()
 
-#================================================================
 # scaler = StandardScaler()
 # scaled_features = scaler.fit_transform(cluster_features)
 
@@ -302,8 +301,6 @@ plt.show()
 
 # plt.grid(alpha=0.3)
 # plt.show()
-#================================================================
-
 
 # Distance analysis
 if "distance_miles" in df.columns:
