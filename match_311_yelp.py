@@ -89,3 +89,11 @@ gdf_matched.to_csv(
 )
 
 print(f"✓ Matched {len(gdf_matched)} complaints within {radius_miles} mile radius.")
+
+total = len(gdf_311)
+matched = len(gdf_matched)
+
+match_percent = (matched / total) * 100
+
+print(f"✓ Matched {matched} complaints within {radius_miles} mile radius.")
+print(f"✓ Match Rate: {match_percent:.2f}% ({matched} out of {total})")
