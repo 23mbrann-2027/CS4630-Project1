@@ -1,35 +1,62 @@
-DataSets:
+# Python for Computational/Data Science Project 1
+
+
+## DataSets
 
 Phil Full Data: [https://drive.google.com/file/d/1XDPFrq7hWpuRYZrXpVWKhITfJSaz1mor/view?usp=sharing](https://drive.google.com/file/d/19pp2iGTpdYgNkf5parsd-_VGYE04UX6t/view?usp=sharing)
 
-Phil Clean Data: https://drive.google.com/file/d/1Jmw_yF5x9ZhNPyR3kJweoEaY6bKgr51R/view?usp=sharing
+Phil Processed Data: https://drive.google.com/file/d/1Jmw_yF5x9ZhNPyR3kJweoEaY6bKgr51R/view?usp=sharing
 
 Yelp Original Data: https://drive.google.com/drive/folders/1EbdIz1xcHyiarcGOSUk4pTke0hS8V1on?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto
 
-yelp cleaned data: https://drive.google.com/drive/folders/1Q28XuCxloQZFX28V3Wf4j5AF9Mh0oVNz?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto
-
+Yelp Processed Data: https://drive.google.com/drive/folders/1Q28XuCxloQZFX28V3Wf4j5AF9Mh0oVNz?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto
 
 Match Phil and Business: https://drive.google.com/file/d/1GCQDPpOqvTv1Qk6Wxh8VCgaVmgWdE-ix/view?usp=sharing
 
 
 
 
-Instructions on how to run each script and which file goes with each phase:
+## Executing the Files
 
-1. phase 1, data cleaning for 311 Dataset:
+### Phase 1:
+1. Create `data` Folder with imbedded folders `processed` & `raw`
 
-- Download the Phil Full Data from above. Put this file in data -> raw. Rename file to be philly_311_2025
-- Go to your terminal and type: python clean_phi_311.py. You may need to import libraries if you have not yet imported them.
-- This will output the Phil Clean Data file.
+2. Install Required Libraries
 
-2. json files, ...
+3. Download the Philadelphia Full Data
+    - Download data from "Phil Full Data". 
+    - Store in `raw` folder with the name `philly_311_2025`.
 
-3. Phase 3 matching.
+4. Download the Yelp Open Dataset (Business, Checkin, and Review JSON only)
+    - Download all files under "Yelp Original Data".
+    - Store files under `raw` folder with the original file names.
+### Phase 2 (Data Cleaning):
+1. Philadelphia 311 Cleaning:
+    1. Terminal Command to clean data:
+        - ```python clean_phi_311.py```
+    - This will output the Phil Clean Data file in `processed` folder.
+2. Yelp Cleaning Process:
+    1. Intitial Clean:
+        - ```python clean_yelp.py```
+    2. Sentiment Analysis:
+        - ```python yelp_text_cleaning.py```
+    3. Phrase Processing/Complaint Filtering:
+        - ```python yelp_heuristics.py```
+    4. ML Category Training:
+        - ```python yelp_training.py```
+    5. Business Category Normalization:
+        - ```business_normalization.py```
 
-- Make sure you have both the Phil Clean Data files as well as the cleaned_business files in the processed folder.
-- Run: python match_311_yelp.py. This will match the yelp and the 311.
+### Phase 3 (Complaint Matching)
 
-4. Phase 4  Analysis & findings.
-- Make sure have completed Phase 3 and file 311_yelp_matches_full is in the processed folder.
-- Run: python p4hotspot.py.
-- This will output data in terminal as well as graphs for the analysis.
+#### Need all files from "Phil Processed Data" & "Yelp Processed Data" moved into `processed` subfolder
+
+1. Data Matching:
+    - ```python match_311_yelp.py```
+
+### Phase 4 (Analysis & findings)
+#### Make sure to have completed Phase 3 and that the file  `311_yelp_matches_full.csv` is in the processed folder.
+
+1. Analysis & Insights:
+    - ```python p4hotspots.py```
+    - This will output statistics in terminal as well as graphs for the analysis.
