@@ -56,11 +56,17 @@ df["status"] = df["status"].fillna("unknown")
 df["subject"] = df["subject"].fillna("").astype(str)
 df["status_notes"] = df["status_notes"].fillna("").astype(str)
 
-# Determine open/closed based on status_notes and closed_date
-empty_notes = df["status_notes"].str.strip() == ""
+# Standardize status values (fix capitalization + spacing)
+df["status"] = df["status"].astype(str).str.lower().str.strip()
+
+# Determine open/closed based on closed_date
 has_closed_date = df["closed_date"].notna()
-df.loc[empty_notes & has_closed_date, "status"] = "closed"
-df.loc[empty_notes & ~has_closed_date, "status"] = "open"
+
+# Override status to ensure consistency
+df.loc[has_closed_date, "status"] = "closed"
+df.loc[~has_closed_date, "status"] = "open"
+
+empty_notes = df["status_notes"].str.strip() == ""
 
 # Fill missing status_notes
 mask_closed = empty_notes & (df["status"].str.lower() == "closed")
@@ -125,7 +131,7 @@ df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 if "service_request_id" in df.columns:
     df = df.drop_duplicates(subset=["service_request_id"])
 
-df = df.sort_values("created_date")
+df = df.sort_values("created_date", ascending=False)
 df = df.drop_duplicates(subset=["address", "service_name", "created_date"], keep="first")
 
 # Build text for ML

@@ -82,7 +82,7 @@ def label_review(text, category_map):
             return category
     return "Other"
 
-# Puts the reviews in vector form
+# Puts the reviews in vector form,
 # Standard format for machine learning models
 def vectorize_text(df, max_features = 2000):
     vectorizer = TfidfVectorizer(stop_words="english", max_features=max_features, ngram_range = (1,2))
