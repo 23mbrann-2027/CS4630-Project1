@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_extraction.text import TfidfVectorizer
 import seaborn as sns
 # Better plot style
 plt.style.use("ggplot")
