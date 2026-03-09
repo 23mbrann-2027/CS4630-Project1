@@ -1,5 +1,0 @@
-# Ignore large raw datasets
-data/raw/*.csv
-
-# Ignore processed outputs
-data/processed/
