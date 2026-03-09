@@ -1,6 +1,5 @@
 # Ignore large raw datasets
 data/raw/*.csv
-data/raw/*.json
 
 # Ignore processed outputs
 data/processed/
